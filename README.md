@@ -1,3 +1,3 @@
 # docker-images
 
-This is a holding pen for work-in-progress Docker images
+Holding pen for work-in-progress Docker images
