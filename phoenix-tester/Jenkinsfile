@@ -1,0 +1,84 @@
+def label = "app-${UUID.randomUUID().toString()}".toString()
+
+def databaseUsername = 'wf-user'
+def databasePassword = 'wfpwd'
+def databaseRootPassword = 'wellframe'
+def databaseName = 'wellframe-development'
+def databaseHost = '127.0.0.1'
+
+podTemplate(
+    label: label,
+    containers: [
+        containerTemplate(
+            name: 'build-db',
+            image: 'mysql:5.7',
+            envVars: [
+                envVar(key: 'MYSQL_ROOT_PASSWORD', value: databaseRootPassword),
+                envVar(key: 'MYSQL_DATABASE', value: databaseName),
+                envVar(key: 'MYSQL_USER', value: databaseUsername),
+                envVar(key: 'MYSQL_PASSWORD', value: databasePassword)
+            ]
+        ),
+        containerTemplate(
+            name: 'builder',
+            image: 'gcr.io/wellframe-dev-201414/phoenix-test:1',
+            command: 'cat',
+            ttyEnabled: true,
+            alwaysPullImage: true,
+            envVars: [
+                envVar(key: 'DB_HOST', value: databaseHost)
+            ]
+        )
+  ]
+  ) {
+    node(label) {
+        stage('Checkout Dash') {
+            //checkout scm
+            git (
+                branch: 'develop',
+                credentialsId: 'phoenix-dash',
+                url: 'git@github.com:WellframeInc/phoenix.git'
+            )
+        }
+
+        stage('Run Bundle') {
+            container('builder') {
+                sh "bundle install --jobs=4 --retry=3"
+            }
+        }
+
+        stage('Build DB') {
+            container('builder') {
+                withEnv(['SEEDS_ADD_LOAD_TEST_DATA=true']) {
+                    echo "Database Host: ${databaseHost}"
+                    echo "Database User: ${databaseUsername}"
+                    sh "cp /Wellframe/database.yml ./config"
+                    def cmd = 'sed -i "s/localhost/' + "${databaseHost}" + '/" ./config/database.yml'
+                    echo "${cmd}"
+                    sh (
+                        script: "${cmd}"
+                    )
+                    cmd = 'sed -i "s/wf-user/' + "${databaseUsername}" + '/" ./config/database.yml'
+                    echo "${cmd}"
+                    sh (
+                        script: "${cmd}"
+                    )
+                    cmd = 'sed -i "s/wfpwd/' + "${databasePassword}" + '/" ./config/database.yml'
+                    echo "${cmd}"
+                    sh (
+                        script: "${cmd}"
+                    )
+                    sh "rake db:reset"
+                }
+            }
+        }
+
+        stage('Export DB') {
+            container('builder') {
+                sh "mkdir -p db_output"
+                sh "mysqldump --user=$databaseUsername --password=$databasePassword --host=$databaseHost --port=3306 wellframe-development > db_output/loadtest.sql"
+                archiveArtifacts artifacts: 'db_output/loadtest.sql'
+            }
+        }
+    }
+}

@@ -1,0 +1,20 @@
+version: '3'
+services:
+  base-image:
+    build:
+      context: .
+      dockerfile: Dockerfile.ruby-2.3.7
+    image: wf-ruby:debian-strech-2.3.7
+
+  test-image:
+    depends_on:
+      - base-image
+    build:
+      context: .
+    image: phoenix-test:1
+
+  mysql-image:
+    build:
+      context: .
+      dockerfile: Dockerfile.mysql
+    image: mysql-test:1

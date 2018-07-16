@@ -1,11 +1,3 @@
-test:
-  adapter: mysql2
-  database: wf-test
-  username: wf-user
-  password: wfpwd
-  host: localhost
-  encoding: utf8mb4
-
 development: &default
   adapter: mysql2
   username: wf-user

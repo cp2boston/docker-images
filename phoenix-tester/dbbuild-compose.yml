@@ -1,0 +1,30 @@
+version: '3'
+services:
+  db:
+    image: mysql:5.7
+    ports:
+      - 3306
+    volumes:
+      - db_data:/var/lib/mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: wellframe
+      MYSQL_DATABASE: wellframe-development
+      MYSQL_USER: wf-user
+      MYSQL_PASSWORD: wfpwd
+
+  tester:
+    image: phoenix-test:1
+    depends_on:
+      - db
+    volumes:
+      - /Users/chrispark/Dev/phoenix-develop:/source
+      - /tmp:/db-output
+    environment:
+      DB_HOST: db
+    restart: none
+    command: ["./build-load-data-db.sh"]
+
+volumes:
+  db_data:
+

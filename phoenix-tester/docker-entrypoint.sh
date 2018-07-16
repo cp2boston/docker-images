@@ -16,13 +16,16 @@ cp database.yml ${SOURCEDIR}/config/database.yml
 # is because the write in place fails with /etc/hosts.
 sed 's/::1\tlocalhost/::1\t/' /etc/hosts > hosts && cp hosts /etc/hosts
 
+# downgrade ruby to 2.3.3 to match the default for debian:stretch
+sed -i "s/ruby '2.3.7'/ruby '2.3.3'/" /source/Gemfile
+
 # so that the rspec run will find the attached redis
 export REDIS_URL=redis://${REDIS_SERVICE_HOST}
 
 # setup
 cd ${SOURCEDIR}
 
-bundle check || bundle install
+bundle check || bundle install --jobs=4 --retry=3
 yarn add --force node-sass
 # tests
 yarn test
